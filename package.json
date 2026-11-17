@@ -1,0 +1,17 @@
+{
+  "name": "portfolio-phillipe",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portfolio profissional com validacao automatizada e deploy no GitHub Pages.",
+  "scripts": {
+    "lint:html": "htmlhint index.html",
+    "lint:css": "stylelint style.css",
+    "check:links": "linkinator index.html --recurse --skip \"node_modules/**\" --skip \".git/**\""
+  },
+  "devDependencies": {
+    "htmlhint": "^1.1.4",
+    "linkinator": "^6.1.2",
+    "stylelint": "^16.14.1",
+    "stylelint-config-standard": "^36.0.1"
+  }
+}

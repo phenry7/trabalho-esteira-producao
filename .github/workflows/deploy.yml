@@ -1,0 +1,64 @@
+name: CD - Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Confirmar arquivo principal
+        run: test -f index.html
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Preparar arquivos do site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: |
+            index.html
+            style.css
+            imagens/
+
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  notificar-falha:
+    needs: deploy
+    if: always() && needs.deploy.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar notificacao para Discord (opcional)
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "Webhook nao configurado. O GitHub ainda enviara notificacoes conforme as preferencias da conta."
+            exit 0
+          fi
+
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d '{"content":"⚠️ O deploy do GitHub Pages falhou no repositorio ${{ github.repository }}. Verifique a aba Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+            "$DISCORD_WEBHOOK_URL"

@@ -1,0 +1,77 @@
+name: CI - Validacao do Portfolio
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    name: Validar Node ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20]
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Verificar index.html
+        run: |
+          if [ ! -f index.html ]; then
+            echo "ERRO: index.html nao encontrado na raiz!"
+            exit 1
+          fi
+          echo "index.html encontrado!"
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Validar HTML
+        run: npm run lint:html
+
+      - name: Validar CSS
+        run: npm run lint:css
+
+      - name: Bloquear arquivos acima de 500KB
+        run: |
+          find . -type f \
+            -not -path './.git/*' \
+            -not -path './node_modules/*' \
+            -size +500k -print -quit > arquivos_grandes.txt
+
+          if [ -s arquivos_grandes.txt ]; then
+            echo "ERRO: arquivo(s) acima de 500KB:"
+            cat arquivos_grandes.txt
+            exit 1
+          fi
+
+          echo "Nenhum arquivo acima de 500KB."
+
+      - name: Bloquear marcadores e termos sensiveis
+        run: |
+          if grep -RniE 'TODO|FIXME|senha|password' \
+            --include='*.html' \
+            --include='*.css' \
+            --include='*.js' \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git .; then
+            echo "ERRO: marcador ou termo sensivel encontrado."
+            exit 1
+          fi
+
+          echo "Nenhum marcador ou termo sensivel encontrado."
+
+      - name: Verificar links e imagens
+        run: npm run check:links
